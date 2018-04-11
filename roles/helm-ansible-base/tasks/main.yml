@@ -1,0 +1,56 @@
+##############################################################################
+# Provision helm-ansible-base
+#
+# This role uses helm and kubectl to provision or deprovision the resources
+# defined by a helm chart.
+##############################################################################
+
+- name: create steps
+  when: hb_k8s_action == "create"
+  block:
+  - name: create values file
+    tempfile:
+      state: file
+    register: values_file
+
+  - name: create overrides file
+    tempfile:
+      state: file
+    register: overrides_file
+
+  - name: write content to values file
+    copy:
+      content: "{{ values }}"
+      dest: "{{ values_file.path }}"
+
+  - name: render overrides template
+    template:
+      src: "{{ hb_overrides_template }}"
+      dest: "{{ overrides_file.path }}"
+
+  - name: run helm template
+    shell: "helm template --debug --name {{ hb_release_name }} -f {{ values_file.path }} -f {{ overrides_file.path }} /opt/chart.tgz | sed -n '/---/,$p' > {{ hb_manifest_path }}"
+    register: helmout
+    failed_when: helmout.rc != 0
+
+  - debug:
+      msg: "{{ helmout.stdout }}"
+
+  - debug:
+      msg: "{{ helmout.stderr }}"
+
+  - name: run kubectl
+    shell: "kubectl {{ hb_k8s_action }} -n {{ namespace }} -f {{ hb_manifest_path }}"
+    register: kubectlout
+    when: hb_apply == true
+    failed_when: (kubectlout.rc != 0 and hb_k8s_action == "create")
+
+- name: delete steps
+  when: hb_k8s_action == "delete"
+  block:
+  - name: delete everything
+    shell: "kubectl delete all -n {{ namespace }} -l release={{ hb_release_name }}"
+    register: deleteout
+
+  - debug:
+      msg: "{{ deleteout.stdout }}"
