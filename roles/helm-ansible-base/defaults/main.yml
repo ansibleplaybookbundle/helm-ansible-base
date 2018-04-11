@@ -1,0 +1,23 @@
+---
+
+# If true, apply the changes by either creating or deleting resources in
+# kubectl. Set this to false if you want an opportunity to modify the resource
+# file before it gets applied. If false, you will be responsible for using
+# the manifest with kubectl or similar.
+hb_apply: true
+
+# the path where a manifest file will be written.
+hb_manifest_path: "/tmp/manifest.yml"
+
+# set to either "create" or "delete"
+hb_k8s_action: "create"
+
+# path to an ansible-compatible jinja template that will render YAML that can
+# be passed to helm using the "-f" option. These values will override any that
+# are found in the chart's values.yaml file. This base image provides an empty
+# default file that will work in case an inheriting image does not need this
+# behavior.
+hb_overrides_template: "/opt/overrides.yml.j2"
+
+# The helm release name to use
+hb_release_name: "bundle-{{ _apb_service_instance_id[:8] }}"
